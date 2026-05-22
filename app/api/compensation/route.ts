@@ -194,3 +194,133 @@ export async function POST(
     );
   }
 }
+
+
+export async function GET(
+  req: Request
+) {
+  try {
+    const url = new URL(req.url);
+
+    const company =
+      url.searchParams.get("company");
+
+    const role =
+      url.searchParams.get("role");
+
+    const location =
+      url.searchParams.get("location");
+
+    const minTC =
+      url.searchParams.get("min_tc");
+
+    const maxTC =
+      url.searchParams.get("max_tc");
+
+    const limit =
+      Math.min(
+        Number(
+          url.searchParams.get(
+            "limit"
+          ) ?? 20
+        ),
+        100
+      );
+
+    const where: any = {};
+
+    if (company) {
+      where.company = {
+        normalized_name:
+          normalizeCompanyName(
+            company
+          ),
+      };
+    }
+
+    if (role) {
+      where.role = {
+        name: {
+          contains: role,
+          mode: "insensitive",
+        },
+      };
+    }
+
+    if (location) {
+      where.location = {
+        city: {
+          contains: location,
+          mode: "insensitive",
+        },
+      };
+    }
+
+    if (minTC || maxTC) {
+      where.total_compensation =
+      {};
+
+      if (minTC) {
+        where.total_compensation.gte =
+          Number(minTC);
+      }
+
+      if (maxTC) {
+        where.total_compensation.lte =
+          Number(maxTC);
+      }
+    }
+
+    const results =
+      await prisma.compensation.findMany({
+        where,
+
+        include: {
+          company: true,
+          role: true,
+          level: true,
+          location: true,
+        },
+
+        orderBy: {
+          total_compensation:
+            "desc",
+        },
+
+        take: limit,
+      });
+
+    return Response.json({
+      success: true,
+
+      count:
+        results.length,
+
+      filters: {
+        company,
+        role,
+        location,
+        minTC,
+        maxTC,
+      },
+
+      data:
+        results,
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        success: false,
+
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unknown error",
+      },
+
+      {
+        status: 400,
+      }
+    );
+  }
+}

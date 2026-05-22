@@ -3,7 +3,17 @@ export function normalizeCompanyName(
 ) {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")
+
+    .replace(
+      /\b(inc|inc\.|llc|ltd|corp|corporation|co)\b/g,
+      ""
+    )
+
+    .replace(
+      /[^a-z0-9]/g,
+      ""
+    )
+
     .trim();
 }
 
