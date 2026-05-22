@@ -91,6 +91,41 @@ export async function POST(
         });
     }
 
+    const existing =
+  await prisma.compensation.findFirst({
+    where: {
+      company_id:
+        company.id,
+
+      role_id:
+        input.role_id,
+
+      level_id:
+        input.level_id,
+
+      location_id:
+        location.id,
+
+      currency:
+        input.currency,
+    },
+  });
+
+    if (existing) {
+    return NextResponse.json(
+        {
+        success: false,
+
+        error:
+            "Duplicate compensation entry",
+        },
+
+        {
+        status: 409,
+        }
+    );
+    }
+
     const tc =
       calculateTotalCompensation(
         input.base_salary,
