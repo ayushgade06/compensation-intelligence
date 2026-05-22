@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import { ConflictError, NotFoundError } from "@/lib/errors/app-error";
+import { handleApiError } from "@/lib/errors/handle-api-error";
+import { success } from "@/lib/errors/error-response";
 
 import {
   createCompensationSchema,
+  compensationQuerySchema,
 } from "@/lib/validators/compensation.validator";
 
 import {
@@ -27,6 +31,33 @@ export async function POST(
       createCompensationSchema.parse(
         body
       );
+
+    const [role, level] =
+      await Promise.all([
+        prisma.role.findUnique({
+          where: {
+            id: input.role_id,
+          },
+        }),
+
+        prisma.level.findUnique({
+          where: {
+            id: input.level_id,
+          },
+        }),
+      ]);
+
+    if (!role) {
+      throw new NotFoundError(
+        "Role not found"
+      );
+    }
+
+    if (!level) {
+      throw new NotFoundError(
+        "Level not found"
+      );
+    }
 
     const normalizedCompany =
       normalizeCompanyName(
@@ -112,18 +143,9 @@ export async function POST(
   });
 
     if (existing) {
-    return NextResponse.json(
-        {
-        success: false,
-
-        error:
-            "Duplicate compensation entry",
-        },
-
-        {
-        status: 409,
-        }
-    );
+      throw new ConflictError(
+        "Duplicate compensation entry"
+      );
     }
 
     const tc =
@@ -170,28 +192,9 @@ export async function POST(
         },
       });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: created,
-      },
-      {
-        status: 201,
-      }
-    );
+    return success(created, {}, 201);
   } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
-      },
-      {
-        status: 400,
-      }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -200,34 +203,31 @@ export async function GET(
   req: Request
 ) {
   try {
-    const url = new URL(req.url);
+    const url =
+      new URL(req.url);
 
-    const company =
-      url.searchParams.get("company");
-
-    const role =
-      url.searchParams.get("role");
-
-    const location =
-      url.searchParams.get("location");
-
-    const minTC =
-      url.searchParams.get("min_tc");
-
-    const maxTC =
-      url.searchParams.get("max_tc");
-
-    const limit =
-      Math.min(
-        Number(
-          url.searchParams.get(
-            "limit"
-          ) ?? 20
-        ),
-        100
+    const input =
+      compensationQuerySchema.parse(
+        Object.fromEntries(
+          url.searchParams
+        )
       );
 
-    const where: any = {};
+    const {
+      company,
+      role,
+      location,
+      min_tc: minTC,
+      max_tc: maxTC,
+      page,
+      limit,
+    } = input;
+
+    const skip =
+      (page - 1) *
+      limit;
+
+    const where: Prisma.CompensationWhereInput = {};
 
     if (company) {
       where.company = {
@@ -241,8 +241,11 @@ export async function GET(
     if (role) {
       where.role = {
         name: {
-          contains: role,
-          mode: "insensitive",
+          contains:
+            role,
+
+          mode:
+            "insensitive",
         },
       };
     }
@@ -250,77 +253,114 @@ export async function GET(
     if (location) {
       where.location = {
         city: {
-          contains: location,
-          mode: "insensitive",
+          contains:
+            location,
+
+          mode:
+            "insensitive",
         },
       };
     }
 
-    if (minTC || maxTC) {
+    if (
+      minTC ||
+      maxTC
+    ) {
       where.total_compensation =
-      {};
+        {};
 
       if (minTC) {
         where.total_compensation.gte =
-          Number(minTC);
+          minTC;
       }
 
       if (maxTC) {
         where.total_compensation.lte =
-          Number(maxTC);
+          maxTC;
       }
     }
 
-    const results =
-      await prisma.compensation.findMany({
-        where,
+    const [
+      results,
+      total,
+    ] =
+      await Promise.all([
 
-        include: {
-          company: true,
-          role: true,
-          level: true,
-          location: true,
-        },
+        prisma.compensation.findMany({
+          where,
 
-        orderBy: {
-          total_compensation:
-            "desc",
-        },
+          include: {
+            company:
+              true,
 
-        take: limit,
-      });
+            role:
+              true,
 
-    return Response.json({
-      success: true,
+            level:
+              true,
 
-      count:
-        results.length,
+            location:
+              true,
+          },
 
-      filters: {
-        company,
-        role,
-        location,
-        minTC,
-        maxTC,
-      },
+          orderBy: {
+            total_compensation:
+              "desc",
+          },
 
-      data:
-        results,
-    });
-  } catch (error) {
-    return Response.json(
+          skip,
+
+          take:
+            limit,
+        }),
+
+        prisma.compensation.count({
+          where,
+        }),
+
+      ]);
+
+    const totalPages =
+      Math.ceil(
+        total /
+          limit
+      );
+
+    return success(
+      results,
       {
-        success: false,
+        page,
 
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
+        limit,
+
+        total,
+
+        totalPages,
+
+        hasNext:
+          page <
+          totalPages,
+
+        hasPrev:
+          page > 1,
+
+        filters: {
+          company,
+
+          role,
+
+          location,
+
+          minTC,
+
+          maxTC,
+        },
       },
-
-      {
-        status: 400,
-      }
     );
+
+  } catch (
+    error
+  ) {
+    return handleApiError(error);
   }
 }

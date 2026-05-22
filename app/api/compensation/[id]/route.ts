@@ -1,8 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+
 import { prisma } from "@/lib/db/prisma";
+import { NotFoundError } from "@/lib/errors/app-error";
+import { handleApiError } from "@/lib/errors/handle-api-error";
+import { success } from "@/lib/errors/error-response";
+import { idParamSchema } from "@/lib/validators/compensation.validator";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: {
     params: Promise<{
       id: string;
@@ -10,79 +15,26 @@ export async function GET(
   }
 ) {
   try {
-    const { id } = await context.params;
+    const params = idParamSchema.parse(await context.params);
 
-    // UUID validation
-    const uuidRegex =
-      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
-
-    if (!uuidRegex.test(id)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_ID",
-            message: "Invalid compensation ID",
-          },
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const compensation =
-      await prisma.compensation.findUnique({
-        where: {
-          id,
-        },
-
-        include: {
-          company: true,
-          role: true,
-          level: true,
-          location: true,
-        },
-      });
+    const compensation = await prisma.compensation.findUnique({
+      where: {
+        id: params.id,
+      },
+      include: {
+        company: true,
+        role: true,
+        level: true,
+        location: true,
+      },
+    });
 
     if (!compensation) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "Compensation not found",
-          },
-        },
-        {
-          status: 404,
-        }
-      );
+      throw new NotFoundError("Compensation not found");
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: compensation,
-      },
-      {
-        status: 200,
-      }
-    );
+    return success(compensation);
   } catch (error) {
-    console.error(error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Internal server error",
-        },
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

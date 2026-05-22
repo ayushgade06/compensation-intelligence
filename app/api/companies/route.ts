@@ -1,97 +1,56 @@
 import { prisma } from "@/lib/db/prisma";
+import { handleApiError } from "@/lib/errors/handle-api-error";
+import { success } from "@/lib/errors/error-response";
 
 export async function GET() {
   try {
-    const grouped =
-      await prisma.compensation.groupBy({
-        by: [
-          "company_id",
-        ],
-
+    const grouped = await prisma.compensation.groupBy({
+      by: ["company_id"],
+      _count: {
+        id: true,
+      },
+      _avg: {
+        total_compensation: true,
+      },
+      _max: {
+        total_compensation: true,
+      },
+      _min: {
+        total_compensation: true,
+      },
+      orderBy: {
         _count: {
-          id: true,
+          id: "desc",
         },
+      },
+    });
 
-        _avg: {
-          total_compensation:
-            true,
+    const companyRows = await prisma.company.findMany({
+      where: {
+        id: {
+          in: grouped.map((group) => group.company_id),
         },
+      },
+    });
 
-        _max: {
-          total_compensation:
-            true,
-        },
+    const companies = grouped.map((group) => {
+      const company = companyRows.find((row) => row.id === group.company_id);
 
-        _min: {
-          total_compensation:
-            true,
-        },
+      return {
+        id: company?.id,
+        company: company?.name,
+        normalized_name: company?.normalized_name,
+        submissions: group._count.id,
+        avg_tc: group._avg.total_compensation,
+        max_tc: group._max.total_compensation,
+        min_tc: group._min.total_compensation,
+      };
+    });
 
-        orderBy: {
-          _count: {
-            id: "desc",
-          },
-        },
-      });
-
-    const companies =
-      await Promise.all(
-        grouped.map(
-          async (g) => {
-            const company =
-              await prisma.company.findUnique({
-                where: {
-                  id:
-                    g.company_id,
-                },
-              });
-
-            return {
-              company:
-                company?.name,
-
-              submissions:
-                g._count.id,
-
-              avg_tc:
-                g._avg
-                  .total_compensation,
-
-              max_tc:
-                g._max
-                  .total_compensation,
-
-              min_tc:
-                g._min
-                  .total_compensation,
-            };
-          }
-        )
-      );
-
-    return Response.json({
-      success: true,
-
-      count:
-        companies.length,
-
-      data:
-        companies,
+    return success(companies, {
+      count: companies.length,
     });
   } catch (error) {
-    return Response.json(
-      {
-        success: false,
-
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
-      },
-
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

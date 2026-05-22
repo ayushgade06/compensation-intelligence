@@ -1,171 +1,68 @@
 import { prisma } from "@/lib/db/prisma";
+import { handleApiError } from "@/lib/errors/handle-api-error";
+import { success } from "@/lib/errors/error-response";
+import { compareQuerySchema } from "@/lib/validators/compensation.validator";
+import { normalizeCompanyName } from "@/lib/utils/normalization";
 
-import {
-  normalizeCompanyName,
-} from "@/lib/utils/normalization";
-
-export async function GET(
-  req: Request
-) {
+export async function GET(req: Request) {
   try {
-    const url =
-      new URL(req.url);
+    const url = new URL(req.url);
+    const input = compareQuerySchema.parse(Object.fromEntries(url.searchParams));
 
-    const companies =
-      url.searchParams.get(
-        "companies"
-      );
+    const normalized = input.companies.map((company) =>
+      normalizeCompanyName(company)
+    );
 
-    if (!companies) {
-      return Response.json(
-        {
-          success: false,
-
-          error:
-            "companies required",
+    const companyRows = await prisma.company.findMany({
+      where: {
+        normalized_name: {
+          in: normalized,
         },
-        {
-          status: 400,
-        }
-      );
-    }
+      },
+      select: {
+        id: true,
+        name: true,
+        normalized_name: true,
+      },
+    });
 
-    const normalized =
-  companies
-    .split(",")
-
-    .map((c) =>
-      normalizeCompanyName(
-        c.trim()
-      )
-    )
-
-    .filter(Boolean);
-
-    if (normalized.length < 2) {
-        return Response.json(
-            {
-            success: false,
-
-            error:
-                "At least 2 companies are required for comparison",
-            },
-
-            {
-            status: 400,
-            }
-        );
-    }
-
-    const companyRows =
-      await prisma.company.findMany({
-        where: {
-          normalized_name: {
-            in:
-              normalized,
-          },
+    const grouped = await prisma.compensation.groupBy({
+      by: ["company_id"],
+      where: {
+        company_id: {
+          in: companyRows.map((company) => company.id),
         },
+      },
+      _avg: {
+        total_compensation: true,
+      },
+      _max: {
+        total_compensation: true,
+      },
+      _min: {
+        total_compensation: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
 
-        select: {
-          id: true,
-          name: true,
-          normalized_name:
-            true,
-        },
-      });
+    const results = grouped.map((group) => {
+      const company = companyRows.find((row) => row.id === group.company_id);
 
-    const grouped =
-      await prisma.compensation.groupBy({
-        by: [
-          "company_id",
-        ],
+      return {
+        company: company?.name,
+        submissions: group._count.id,
+        avg_tc: group._avg.total_compensation,
+        max_tc: group._max.total_compensation,
+        min_tc: group._min.total_compensation,
+      };
+    });
 
-        where: {
-          company_id: {
-            in:
-              companyRows.map(
-                (c) =>
-                  c.id
-              ),
-          },
-        },
-
-        _avg: {
-          total_compensation:
-            true,
-        },
-
-        _max: {
-          total_compensation:
-            true,
-        },
-
-        _min: {
-          total_compensation:
-            true,
-        },
-
-        _count: {
-          id: true,
-        },
-      });
-
-    const results =
-      grouped.map(
-        (g) => {
-          const company =
-            companyRows.find(
-              (
-                c
-              ) =>
-                c.id ===
-                g.company_id
-            );
-
-          return {
-            company:
-              company?.name,
-
-            submissions:
-              g._count.id,
-
-            avg_tc:
-              g._avg
-                .total_compensation,
-
-            max_tc:
-              g._max
-                .total_compensation,
-
-            min_tc:
-              g._min
-                .total_compensation,
-          };
-        }
-      );
-
-    return Response.json({
-      success: true,
-
-      count:
-        results.length,
-
-      data:
-        results,
+    return success(results, {
+      count: results.length,
     });
   } catch (error) {
-    return Response.json(
-      {
-        success: false,
-
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

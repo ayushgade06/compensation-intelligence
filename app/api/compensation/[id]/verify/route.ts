@@ -1,76 +1,41 @@
 import { prisma } from "@/lib/db/prisma";
+import { NotFoundError } from "@/lib/errors/app-error";
+import { handleApiError } from "@/lib/errors/handle-api-error";
+import { success } from "@/lib/errors/error-response";
+import { idParamSchema } from "@/lib/validators/compensation.validator";
 
 export async function PATCH(
-  _: Request,
-
-  {
-    params,
-  }: {
+  _request: Request,
+  context: {
     params: Promise<{
       id: string;
     }>;
   }
 ) {
   try {
-    const { id } =
-      await params;
+    const params = idParamSchema.parse(await context.params);
 
-    const existing =
-      await prisma.compensation.findUnique({
-        where: {
-          id,
-        },
-      });
+    const existing = await prisma.compensation.findUnique({
+      where: {
+        id: params.id,
+      },
+    });
 
     if (!existing) {
-      return Response.json(
-        {
-          success: false,
-
-          error:
-            "Compensation not found",
-        },
-
-        {
-          status: 404,
-        }
-      );
+      throw new NotFoundError("Compensation not found");
     }
 
-    const updated =
-      await prisma.compensation.update({
-        where: {
-          id,
-        },
-
-        data: {
-          verified:
-            true,
-        },
-      });
-
-    return Response.json({
-      success: true,
-
-      data:
-        updated,
-    });
-  }
-
-  catch (error) {
-    return Response.json(
-      {
-        success: false,
-
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
+    const updated = await prisma.compensation.update({
+      where: {
+        id: params.id,
       },
+      data: {
+        verified: true,
+      },
+    });
 
-      {
-        status: 500,
-      }
-    );
+    return success(updated);
+  } catch (error) {
+    return handleApiError(error);
   }
 }
