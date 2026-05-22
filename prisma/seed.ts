@@ -1,0 +1,205 @@
+import "dotenv/config";
+
+import { PrismaClient, RoleCategory } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL!,
+});
+
+const prisma = new PrismaClient({
+  adapter,
+});
+
+async function main() {
+  console.log("Seeding...");
+
+  await prisma.compensation.deleteMany();
+  await prisma.location.deleteMany();
+  await prisma.company.deleteMany();
+  await prisma.level.deleteMany();
+  await prisma.role.deleteMany();
+
+  const roles = await Promise.all([
+    prisma.role.create({
+      data: {
+        name: "Software Engineer",
+        category: RoleCategory.ENGINEERING,
+      },
+    }),
+
+    prisma.role.create({
+      data: {
+        name: "Product Manager",
+        category: RoleCategory.PRODUCT,
+      },
+    }),
+
+    prisma.role.create({
+      data: {
+        name: "Data Scientist",
+        category: RoleCategory.DATA,
+      },
+    }),
+
+    prisma.role.create({
+      data: {
+        name: "Designer",
+        category: RoleCategory.DESIGN,
+      },
+    }),
+
+    prisma.role.create({
+      data: {
+        name: "Engineering Manager",
+        category: RoleCategory.MANAGEMENT,
+      },
+    }),
+  ]);
+
+  const levels = await Promise.all([
+    prisma.level.create({
+      data: {
+        name: "Junior (L3)",
+        code: "L3",
+        order: 3,
+        description: "0–2 years",
+      },
+    }),
+
+    prisma.level.create({
+      data: {
+        name: "Mid-Level (L4)",
+        code: "L4",
+        order: 4,
+        description: "2–5 years",
+      },
+    }),
+
+    prisma.level.create({
+      data: {
+        name: "Senior (L5)",
+        code: "L5",
+        order: 5,
+        description: "5–8 years",
+      },
+    }),
+
+    prisma.level.create({
+      data: {
+        name: "Staff (L6)",
+        code: "L6",
+        order: 6,
+        description: "8–12 years",
+      },
+    }),
+
+    prisma.level.create({
+      data: {
+        name: "Principal (L7)",
+        code: "L7",
+        order: 7,
+        description: "12+ years",
+      },
+    }),
+  ]);
+
+  const google = await prisma.company.create({
+    data: {
+      name: "Google",
+      normalized_name: "google",
+      slug: "google",
+    },
+  });
+
+  const meta = await prisma.company.create({
+    data: {
+      name: "Meta",
+      normalized_name: "meta",
+      slug: "meta",
+    },
+  });
+
+  const microsoft = await prisma.company.create({
+    data: {
+      name: "Microsoft",
+      normalized_name: "microsoft",
+      slug: "microsoft",
+    },
+  });
+
+  const sf = await prisma.location.create({
+    data: {
+      city: "San Francisco",
+      state: "California",
+      country: "USA",
+      normalized: "san francisco,california,usa",
+    },
+  });
+
+  const bangalore = await prisma.location.create({
+    data: {
+      city: "Bangalore",
+      country: "India",
+      normalized: "bangalore,india",
+    },
+  });
+
+  await prisma.compensation.createMany({
+    data: [
+      {
+        company_id: google.id,
+        role_id: roles[0].id,
+        level_id: levels[2].id,
+        location_id: sf.id,
+
+        base_salary: 180000,
+
+        bonus: 25000,
+
+        stock_value: 80000,
+
+        total_compensation: 285000,
+      },
+
+      {
+        company_id: meta.id,
+        role_id: roles[0].id,
+        level_id: levels[2].id,
+        location_id: sf.id,
+
+        base_salary: 190000,
+
+        bonus: 30000,
+
+        stock_value: 90000,
+
+        total_compensation: 310000,
+      },
+
+      {
+        company_id: microsoft.id,
+        role_id: roles[0].id,
+        level_id: levels[1].id,
+        location_id: bangalore.id,
+
+        base_salary: 4500000,
+
+        bonus: 500000,
+
+        stock_value: 1200000,
+
+        total_compensation: 6200000,
+
+        currency: "INR",
+      },
+    ],
+  });
+
+  console.log("Done.");
+}
+
+main()
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
