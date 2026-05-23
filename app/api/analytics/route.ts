@@ -1,7 +1,18 @@
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError } from "@/lib/errors/handle-api-error";
 import { success } from "@/lib/errors/error-response";
-import { AnyARecord } from "dns";
+
+type LevelGroup = {
+  level_id: string;
+  _count: {
+    id: number;
+  };
+};
+
+type LevelRow = {
+  id: string;
+  name: string;
+};
 
 export async function GET() {
   try {
@@ -40,8 +51,10 @@ export async function GET() {
       }),
     ]);
 
-    const levelDistribution = levels.map((level : any) => {
-      const row = levelRows.find((item : any) => item.id === level.level_id);
+    const levelDistribution = (levels as LevelGroup[]).map((level) => {
+      const row = (levelRows as LevelRow[]).find(
+        (item) => item.id === level.level_id
+      );
 
       return {
         level: row?.name,

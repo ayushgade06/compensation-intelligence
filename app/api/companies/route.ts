@@ -2,9 +2,25 @@ import { prisma } from "@/lib/db/prisma";
 import { handleApiError } from "@/lib/errors/handle-api-error";
 import { success } from "@/lib/errors/error-response";
 
+type CompanyGroup = {
+  company_id: string;
+  _count: {
+    id: number;
+  };
+  _avg: {
+    total_compensation: unknown;
+  };
+  _max: {
+    total_compensation: unknown;
+  };
+  _min: {
+    total_compensation: unknown;
+  };
+};
+
 export async function GET() {
   try {
-    const grouped = await prisma.compensation.groupBy({
+    const groupedResult = await prisma.compensation.groupBy({
       by: ["company_id"],
       _count: {
         id: true,
@@ -24,6 +40,7 @@ export async function GET() {
         },
       },
     });
+    const grouped = groupedResult as unknown as CompanyGroup[];
 
     const companyRows = await prisma.company.findMany({
       where: {
