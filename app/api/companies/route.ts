@@ -51,7 +51,7 @@ export async function GET() {
     });
 
     const companies = grouped.map((group) => {
-      const company = companyRows.find((row) => row.id === group.company_id);
+      const company = companyRows.find((row : any) => row.id === group.company_id);
 
       return {
         id: company?.id,
