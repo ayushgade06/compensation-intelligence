@@ -127,7 +127,7 @@ export function CompensationForm() {
           Role
           <select className="rounded border border-slate-300 px-3 py-2" value={form.role_id} onChange={(event) => update("role_id", event.target.value)} required>
             <option value="">Select role</option>
-            {roles.map((role) => (
+            {roles.map((role : any) => (
               <option key={role.id} value={role.id}>{role.name}</option>
             ))}
           </select>
@@ -137,7 +137,7 @@ export function CompensationForm() {
           Level
           <select className="rounded border border-slate-300 px-3 py-2" value={form.level_id} onChange={(event) => update("level_id", event.target.value)} required>
             <option value="">Select level</option>
-            {levels.map((level) => (
+            {levels.map((level : any) => (
               <option key={level.id} value={level.id}>{level.name}</option>
             ))}
           </select>

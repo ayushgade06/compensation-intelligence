@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const input = compareQuerySchema.parse(Object.fromEntries(url.searchParams));
 
-    const normalized = input.companies.map((company) =>
+    const normalized = input.companies.map((company : any) =>
       normalizeCompanyName(company)
     );
 
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
       by: ["company_id"],
       where: {
         company_id: {
-          in: companyRows.map((company) => company.id),
+          in: companyRows.map((company : any) => company.id),
         },
       },
       _avg: {
@@ -47,8 +47,8 @@ export async function GET(req: Request) {
       },
     });
 
-    const results = grouped.map((group) => {
-      const company = companyRows.find((row) => row.id === group.company_id);
+    const results = grouped.map((group : any) => {
+      const company = companyRows.find((row : any) => row.id === group.company_id);
 
       return {
         company: company?.name,

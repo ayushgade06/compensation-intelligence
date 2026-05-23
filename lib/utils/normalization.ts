@@ -24,7 +24,7 @@ export function normalizeLocation(
 ) {
   return [city, state, country]
     .filter(Boolean)
-    .map((v) =>
+    .map((v : any) =>
       v!.toLowerCase().trim()
     )
     .join(",");

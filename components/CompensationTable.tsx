@@ -31,7 +31,7 @@ export function CompensationTable({ rows, loading = false }: Props) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => (
+          {rows.map((row : any) => (
             <tr key={row.id}>
               <td className="px-4 py-3 font-medium text-slate-950">{row.company.name}</td>
               <td className="px-4 py-3 text-slate-700">{row.role.name}</td>

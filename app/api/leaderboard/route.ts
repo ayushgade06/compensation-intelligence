@@ -30,8 +30,8 @@ export async function GET(req: Request) {
       },
     });
 
-    const leaderboard = grouped.map((group) => {
-      const company = companies.find((row) => row.id === group.company_id);
+    const leaderboard = grouped.map((group : any) => {
+      const company = companies.find((row : any) => row.id === group.company_id);
       let score = 0;
 
       if (metric === "avg") {

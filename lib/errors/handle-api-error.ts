@@ -13,7 +13,7 @@ export function handleApiError(error: unknown) {
     return failure(
       "VALIDATION_ERROR",
       "Invalid request",
-      error.issues.map((issue) => ({
+      error.issues.map((issue : any) => ({
         path: issue.path.join("."),
         message: issue.message,
       })),

@@ -69,7 +69,7 @@ export function ComparisonView() {
 
       {rows.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
-          {rows.map((row) => (
+          {rows.map((row : any) => (
             <article key={row.company} className="rounded border border-slate-200 bg-white p-5">
               <h2 className="text-lg font-semibold text-slate-950">{row.company}</h2>
               <dl className="mt-4 grid gap-3 text-sm">

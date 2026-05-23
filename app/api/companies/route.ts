@@ -45,12 +45,12 @@ export async function GET() {
     const companyRows = await prisma.company.findMany({
       where: {
         id: {
-          in: grouped.map((group) => group.company_id),
+          in: grouped.map((group : any) => group.company_id),
         },
       },
     });
 
-    const companies = grouped.map((group) => {
+    const companies = grouped.map((group : any) => {
       const company = companyRows.find((row : any) => row.id === group.company_id);
 
       return {

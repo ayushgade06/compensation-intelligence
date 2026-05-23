@@ -27,7 +27,7 @@ export function CompanySelector({ label, value, onChange }: Props) {
       {label}
       <select className="rounded border border-slate-300 px-3 py-2" value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">Select company</option>
-        {companies.map((company) => (
+        {companies.map((company : any) => (
           <option key={company.normalized_name ?? company.company} value={company.company ?? ""}>
             {company.company}
           </option>

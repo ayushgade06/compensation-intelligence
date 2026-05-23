@@ -85,7 +85,7 @@ export const compareQuerySchema =
       .transform((value) =>
         value
           .split(",")
-          .map((company) => company.trim())
+          .map((company : any) => company.trim())
           .filter(Boolean)
       )
       .refine((companies) => companies.length >= 2, {

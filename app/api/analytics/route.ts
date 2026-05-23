@@ -51,9 +51,9 @@ export async function GET() {
       }),
     ]);
 
-    const levelDistribution = (levels as LevelGroup[]).map((level) => {
+    const levelDistribution = (levels as LevelGroup[]).map((level : any) => {
       const row = (levelRows as LevelRow[]).find(
-        (item) => item.id === level.level_id
+        (item : any) => item.id === level.level_id
       );
 
       return {
