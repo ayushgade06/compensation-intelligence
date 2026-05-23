@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError } from "@/lib/errors/handle-api-error";
 import { success } from "@/lib/errors/error-response";
+import { AnyARecord } from "dns";
 
 export async function GET() {
   try {
@@ -39,7 +40,7 @@ export async function GET() {
       }),
     ]);
 
-    const levelDistribution = levels.map((level) => {
+    const levelDistribution = levels.map((level : any) => {
       const row = levelRows.find((item) => item.id === level.level_id);
 
       return {
