@@ -41,7 +41,7 @@ export async function GET() {
     ]);
 
     const levelDistribution = levels.map((level : any) => {
-      const row = levelRows.find((item) => item.id === level.level_id);
+      const row = levelRows.find((item : any) => item.id === level.level_id);
 
       return {
         level: row?.name,
